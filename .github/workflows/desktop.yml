@@ -1,0 +1,56 @@
+name: Desktop builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release executable
+        run: cargo build --release
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-noise-windows
+          path: target/release/focus-noise.exe
+
+  build-macos:
+    name: macOS
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release executable
+        run: cargo build --release
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-noise-macos
+          path: target/release/focus-noise
+
+  build-linux:
+    name: Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux audio and window dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev libx11-dev libxi-dev libgl1-mesa-dev
+      - name: Build release executable
+        run: cargo build --release
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-noise-linux
+          path: target/release/focus-noise
