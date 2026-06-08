@@ -1,7 +1,9 @@
 # Focus Noise
 
-Focus Noise is a small desktop app for playing white noise and brown noise.
-It works offline and generates sound inside the app, so no audio files or Docker setup are required.
+Focus Noise is a small app for playing noise sounds designed for focus, rest, and sleep.
+It started as something the author personally wanted: a simple noise player that works offline and stays out of the way.
+
+The app generates sound inside the program, so no audio files or Docker setup are required.
 
 ## What You Can Do
 
