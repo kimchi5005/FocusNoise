@@ -1,126 +1,130 @@
 # Focus Noise
 
-Focus Noise is a small app for playing noise sounds designed for focus, rest, and sleep.
-It started as something the author personally wanted: a simple noise player that works offline and stays out of the way.
+Focus Noise は、集中・休憩・睡眠向けのノイズを再生する小さなアプリです。
+作者自身が「こういうシンプルなノイズ再生アプリが欲しい」と思って作り始めました。
 
-The app generates sound inside the program, so no audio files or Docker setup are required.
+音声ファイルは使わず、アプリの中でノイズをリアルタイム生成します。
+そのため、オフラインで動作し、Dockerなどの追加環境も不要です。
 
-## What You Can Do
+## できること
 
-- Play white noise
-- Play brown noise
-- Play, pause, and stop
-- Change volume
-- Adjust left and right balance
-- Fade in and fade out
-- See the current playback state
-- Use a simple dark interface
-- Switch between Japanese and English
-- Save settings automatically
+- ホワイトノイズの再生
+- ブラウンノイズの再生
+- 再生、一時停止、停止
+- 音量調整
+- 左右バランス調整
+- フェードイン
+- フェードアウト
+- 現在の再生状態表示
+- シンプルなダークUI
+- 日本語 / 英語の切り替え
+- 設定の自動保存
 
-## Why Rust
+## Rustを使う理由
 
-Rust is a good fit for this app because it can produce a fast, standalone desktop executable with low CPU and memory usage.
-The app uses native audio output and generates noise in real time instead of loading large sound files.
+Rustは、軽くて速い単体アプリを作るのに向いています。
+Focus Noise では音声をリアルタイム生成するため、大きな音声ファイルを同梱する必要がありません。
 
-## Install for Development
+CPU使用率とメモリ使用量を抑えつつ、Windows、macOS、Linuxなど複数の環境へ展開しやすい構成を目指しています。
 
-Install Rust from:
+## 開発環境の準備
+
+Rustをインストールします。
 
 https://www.rust-lang.org/tools/install
 
-Then check that Rust is available:
+インストール後、次のコマンドで確認できます。
 
 ```bash
 cargo --version
 ```
 
-## Run the App
+## アプリを起動する
 
 ```bash
 cargo run --release
 ```
 
-## Build the App
+## アプリをビルドする
 
 ```bash
 cargo build --release
 ```
 
-The executable will be created here:
+ビルド後の実行ファイルは以下に作成されます。
 
 ```text
 target/release/focus-noise
 target/release/focus-noise.exe
 ```
 
-## Supported Platforms
+## 対応予定のプラットフォーム
 
-Focus Noise is currently structured as a desktop app.
+Focus Noise は現在、デスクトップアプリとして構成されています。
 
-| Platform | Status | Notes |
+| プラットフォーム | 状態 | 補足 |
 | --- | --- | --- |
-| Windows | Planned build target | GitHub Actions can build `focus-noise.exe`. |
-| macOS | Planned build target | The same Rust desktop app should build on macOS. |
-| Linux | Planned build target | Requires common audio/window system development packages when building. |
-| Android | Future target | Possible, but needs a mobile app wrapper and mobile-specific testing. |
-| iPhone / iPad | Future target | Possible in principle, but iOS packaging, signing, and App Store rules add extra work. |
+| Windows | ビルド対象 | GitHub Actionsで `focus-noise.exe` を作成できます。 |
+| macOS | ビルド対象 | 同じRustコードでビルドする想定です。 |
+| Linux | ビルド対象 | ビルド時に音声・ウィンドウ関連の開発パッケージが必要です。 |
+| Android | 将来対応予定 | モバイル用のラッパーや実機テストが必要です。 |
+| iPhone / iPad | 将来対応予定 | iOS向けの署名、パッケージング、配布対応が必要です。 |
 
-The long-term goal is to keep the core app logic portable.
-Noise generation, saved settings, labels, and playback state should stay separate from platform-specific packaging.
+長期的には、ノイズ生成、設定保存、表示文言、再生状態などの中心部分をできるだけ共通化し、OSごとの差分を小さくする方針です。
 
-## Desktop Builds
+## デスクトップ向けビルド
 
-This project includes a GitHub Actions workflow for Windows, macOS, and Linux.
+このプロジェクトには、Windows、macOS、Linux向けのGitHub Actionsワークフローが含まれています。
 
-1. Push this repository to GitHub.
-2. Open the Actions tab.
-3. Run the "Desktop builds" workflow.
-4. Download the artifact for your platform.
+1. このリポジトリをGitHubにpushします。
+2. GitHubのリポジトリでActionsタブを開きます。
+3. `Desktop builds` ワークフローを実行します。
+4. 自分の環境に合った成果物をダウンロードします。
 
-Artifacts:
+作成される成果物:
 
 - `focus-noise-windows`
 - `focus-noise-macos`
 - `focus-noise-linux`
 
-## Project Structure
+## プロジェクト構成
 
 ```text
 src/
-  main.rs          App entry point
-  app.rs           UI and screen behavior
-  audio.rs         Audio output and noise generation
-  localization.rs  Japanese and English labels
-  model.rs         Shared enums and app state types
-  settings.rs      Settings load/save
+  main.rs          アプリの入口
+  app.rs           UIと画面上の操作
+  audio.rs         音声出力とノイズ生成
+  localization.rs  日本語 / 英語の表示文言
+  model.rs         共有する状態やenum
+  settings.rs      設定の読み込みと保存
 ```
 
-## Extending the App
+## 拡張について
 
-The code is split so new features can be added without changing everything at once.
+後から機能を追加しやすいように、役割ごとにファイルを分けています。
 
-- Add a new noise type in `src/model.rs`
-- Add its label in `src/localization.rs`
-- Add its sound generation logic in `src/audio.rs`
-- Add new saved options in `src/settings.rs`
-- Add new controls or screens in `src/app.rs`
+- 新しいノイズ種類を追加する場合: `src/model.rs`
+- 表示名を追加する場合: `src/localization.rs`
+- 音の生成処理を追加する場合: `src/audio.rs`
+- 保存する設定を追加する場合: `src/settings.rs`
+- 画面や操作を追加する場合: `src/app.rs`
 
-Good future additions could include a sleep timer, presets, pink noise, tray support, or startup behavior.
+今後の追加候補としては、スリープタイマー、プリセット、ピンクノイズ、タスクトレイ対応、自動起動などがあります。
 
-## Mobile Roadmap
+## モバイル対応の方針
 
-Mobile support should be added after the desktop version is stable.
-The recommended path is:
+モバイル対応は、デスクトップ版が安定してから進める想定です。
 
-1. Keep noise generation and settings logic independent from the desktop UI.
-2. Add automated tests for the audio state and settings logic.
-3. Choose the mobile shell:
-   - Android: Rust plus an Android wrapper, or a UI layer that can call the Rust core.
-   - iOS: Rust core plus an iOS wrapper, with Apple signing and packaging.
-4. Reuse the same app model where possible, and replace only platform-specific UI and packaging code.
+おすすめの進め方:
 
-## License
+1. ノイズ生成や設定保存などの中心部分を、デスクトップUIから独立させます。
+2. 音声状態や設定保存の自動テストを追加します。
+3. モバイル用の外側を選びます。
+   - Android: Rustの中心部分をAndroidアプリから呼び出す構成
+   - iOS: Rustの中心部分をiOSアプリから呼び出す構成
+4. できるだけ同じアプリモデルを使い、UIや配布方法だけを各OS向けに差し替えます。
 
-This project is licensed under the MIT License.
-See [LICENSE](LICENSE) for details.
+## ライセンス
+
+このプロジェクトはMIT Licenseで公開しています。
+詳しくは [LICENSE](LICENSE) を確認してください。
