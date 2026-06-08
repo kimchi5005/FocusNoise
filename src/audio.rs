@@ -22,6 +22,7 @@ struct AudioState {
     target_volume: f32,
     current_volume: f32,
     balance: f32,
+    fade_seconds: f32,
     fade_step: f32,
     brown_last: f32,
 }
@@ -31,10 +32,11 @@ impl AudioState {
         Self {
             playback: PlaybackState::Stopped,
             noise_kind: settings.noise_kind,
-            target_volume: settings.volume,
+            target_volume: settings.output_gain(),
             current_volume: 0.0,
-            balance: settings.balance,
-            fade_step: 1.0 / (2.0 * 48_000.0),
+            balance: settings.balance_pan(),
+            fade_seconds: settings.fade_seconds_f32(),
+            fade_step: 0.0,
             brown_last: 0.0,
         }
     }
@@ -57,9 +59,6 @@ impl AudioEngine {
         let channels = config.channels() as usize;
 
         let state = Arc::new(Mutex::new(AudioState::from_settings(settings)));
-        if let Ok(mut audio) = state.lock() {
-            audio.fade_step = fade_step(settings.fade_seconds, sample_rate);
-        }
 
         let err_fn = |err| eprintln!("Audio stream error: {err}");
         let stream = match config.sample_format() {
@@ -101,14 +100,11 @@ impl AudioEngine {
     }
 
     pub fn set_fade_seconds(&self, seconds: f32) {
-        self.with_state(|state| state.fade_step = fade_step(seconds, self.sample_rate));
+        self.with_state(|state| state.fade_seconds = seconds);
     }
 
     pub fn play(&self) {
-        self.with_state(|state| {
-            state.current_volume = state.target_volume;
-            state.playback = PlaybackState::Playing;
-        });
+        self.fade_in();
     }
 
     pub fn pause(&self) {
@@ -119,26 +115,25 @@ impl AudioEngine {
     }
 
     pub fn stop(&self) {
-        self.with_state(|state| {
-            state.current_volume = 0.0;
-            state.brown_last = 0.0;
-            state.playback = PlaybackState::Stopped;
-        });
+        self.fade_out();
     }
 
     pub fn fade_in(&self) {
         self.with_state(|state| {
             state.current_volume = 0.0;
+            state.fade_step = fade_step(state.target_volume, state.fade_seconds, self.sample_rate);
             state.playback = PlaybackState::FadingIn;
         });
     }
 
     pub fn fade_out(&self) {
         self.with_state(|state| {
-            if !matches!(
+            if matches!(
                 state.playback,
-                PlaybackState::Stopped | PlaybackState::Paused
+                PlaybackState::Playing | PlaybackState::FadingIn | PlaybackState::FadingOut
             ) {
+                state.fade_step =
+                    fade_step(state.current_volume, state.fade_seconds, self.sample_rate);
                 state.playback = PlaybackState::FadingOut;
             }
         });
@@ -158,11 +153,11 @@ impl AudioEngine {
     }
 }
 
-fn fade_step(seconds: f32, sample_rate: f32) -> f32 {
+fn fade_step(volume_delta: f32, seconds: f32, sample_rate: f32) -> f32 {
     if seconds <= 0.01 {
-        return 1.0;
+        return volume_delta.max(1.0);
     }
-    1.0 / (seconds * sample_rate)
+    (volume_delta / (seconds * sample_rate)).max(f32::EPSILON)
 }
 
 fn build_stream<T>(

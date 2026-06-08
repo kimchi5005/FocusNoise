@@ -2,7 +2,6 @@
 
 mod app;
 mod audio;
-mod localization;
 mod model;
 mod settings;
 

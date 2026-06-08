@@ -18,13 +18,3 @@ pub enum PlaybackState {
     FadingIn,
     FadingOut,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Language {
-    Japanese,
-    English,
-}
-
-impl Language {
-    pub const ALL: [Self; 2] = [Self::Japanese, Self::English];
-}

@@ -4,8 +4,7 @@ use eframe::egui;
 
 use crate::{
     audio::AudioEngine,
-    localization::{language_label, noise_label, state_label, text},
-    model::{Language, NoiseKind, PlaybackState},
+    model::{NoiseKind, PlaybackState},
     settings::{load_settings, save_settings, Settings},
     APP_NAME,
 };
@@ -58,28 +57,11 @@ impl FocusNoiseApp {
             .unwrap_or(PlaybackState::Stopped)
     }
 
-    fn language_controls(&mut self, ui: &mut egui::Ui, lang: Language) {
-        ui.horizontal(|ui| {
-            ui.label(text(lang, "Language", "言語"));
-            let before = self.settings.language;
-            for language in Language::ALL {
-                ui.selectable_value(
-                    &mut self.settings.language,
-                    language,
-                    language_label(language),
-                );
-            }
-            if self.settings.language != before {
-                self.mark_dirty();
-            }
-        });
-    }
-
-    fn noise_controls(&mut self, ui: &mut egui::Ui, lang: Language) {
+    fn noise_controls(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             let before = self.settings.noise_kind;
             for kind in NoiseKind::ALL {
-                ui.selectable_value(&mut self.settings.noise_kind, kind, noise_label(lang, kind));
+                ui.selectable_value(&mut self.settings.noise_kind, kind, noise_label(kind));
             }
             if self.settings.noise_kind != before {
                 if let Some(audio) = self.audio() {
@@ -90,97 +72,116 @@ impl FocusNoiseApp {
         });
     }
 
-    fn level_controls(&mut self, ui: &mut egui::Ui, lang: Language) {
+    fn level_controls(&mut self, ui: &mut egui::Ui) {
         if ui
-            .add(
-                egui::Slider::new(&mut self.settings.volume, 0.0..=1.0)
-                    .text(text(lang, "Volume", "音量")),
-            )
+            .add(egui::Slider::new(&mut self.settings.volume, 0..=100).text("Volume"))
             .changed()
         {
             if let Some(audio) = self.audio() {
-                audio.set_volume(self.settings.volume);
+                audio.set_volume(self.settings.output_gain());
             }
             self.mark_dirty();
         }
 
         if ui
-            .add(
-                egui::Slider::new(&mut self.settings.balance, -1.0..=1.0).text(text(
-                    lang,
-                    "Balance",
-                    "左右バランス",
-                )),
-            )
+            .add(egui::Slider::new(&mut self.settings.balance, 0..=100).text("Balance"))
             .changed()
         {
             if let Some(audio) = self.audio() {
-                audio.set_balance(self.settings.balance);
+                audio.set_balance(self.settings.balance_pan());
             }
             self.mark_dirty();
         }
 
         if ui
-            .add(
-                egui::Slider::new(&mut self.settings.fade_seconds, 0.0..=10.0).text(text(
-                    lang,
-                    "Fade seconds",
-                    "フェード秒数",
-                )),
-            )
+            .add(egui::Slider::new(&mut self.settings.fade_seconds, 0..=100).text("Fade seconds"))
             .changed()
         {
             if let Some(audio) = self.audio() {
-                audio.set_fade_seconds(self.settings.fade_seconds);
+                audio.set_fade_seconds(self.settings.fade_seconds_f32());
             }
             self.mark_dirty();
         }
     }
 
-    fn playback_controls(&mut self, ui: &mut egui::Ui, lang: Language) {
+    fn playback_controls(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_wrapped(|ui| {
-            if ui.button(text(lang, "Play", "再生")).clicked() {
+            if ui.button("Play").clicked() {
                 if let Some(audio) = self.audio() {
                     audio.play();
                 }
             }
-            if ui.button(text(lang, "Pause", "一時停止")).clicked() {
+            if ui.button("Pause").clicked() {
                 if let Some(audio) = self.audio() {
                     audio.pause();
                 }
             }
-            if ui.button(text(lang, "Stop", "停止")).clicked() {
+            if ui.button("Stop").clicked() {
                 if let Some(audio) = self.audio() {
                     audio.stop();
-                }
-            }
-        });
-
-        ui.horizontal_wrapped(|ui| {
-            if ui.button(text(lang, "Fade in", "フェードイン")).clicked() {
-                if let Some(audio) = self.audio() {
-                    audio.fade_in();
-                }
-            }
-            if ui
-                .button(text(lang, "Fade out", "フェードアウト"))
-                .clicked()
-            {
-                if let Some(audio) = self.audio() {
-                    audio.fade_out();
                 }
             }
         });
     }
 }
 
+fn noise_label(kind: NoiseKind) -> &'static str {
+    match kind {
+        NoiseKind::White => "White noise",
+        NoiseKind::Brown => "Brown noise",
+    }
+}
+
+fn state_label(state: PlaybackState) -> &'static str {
+    match state {
+        PlaybackState::Stopped => "Stopped",
+        PlaybackState::Playing => "Playing",
+        PlaybackState::Paused => "Paused",
+        PlaybackState::FadingIn => "Fading in",
+        PlaybackState::FadingOut => "Fading out",
+    }
+}
+
+fn apply_responsive_style(ctx: &egui::Context) {
+    let width = ctx.input(|input| input.screen_rect().width());
+    let scale = (width / 420.0).clamp(0.85, 1.45);
+    let mut style = (*ctx.style()).clone();
+
+    style.visuals = egui::Visuals::dark();
+    style.spacing.item_spacing = egui::vec2(8.0 * scale, 8.0 * scale);
+    style.spacing.button_padding = egui::vec2(10.0 * scale, 6.0 * scale);
+    style.spacing.slider_width = 220.0 * scale;
+    style.text_styles = [
+        (
+            egui::TextStyle::Heading,
+            egui::FontId::proportional(28.0 * scale),
+        ),
+        (
+            egui::TextStyle::Body,
+            egui::FontId::proportional(16.0 * scale),
+        ),
+        (
+            egui::TextStyle::Button,
+            egui::FontId::proportional(16.0 * scale),
+        ),
+        (
+            egui::TextStyle::Small,
+            egui::FontId::proportional(12.0 * scale),
+        ),
+        (
+            egui::TextStyle::Monospace,
+            egui::FontId::monospace(14.0 * scale),
+        ),
+    ]
+    .into();
+    ctx.set_style(style);
+}
+
 impl eframe::App for FocusNoiseApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.set_visuals(egui::Visuals::dark());
+        apply_responsive_style(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let lang = self.settings.language;
-
             ui.add_space(12.0);
             ui.heading(APP_NAME);
             ui.add_space(8.0);
@@ -190,30 +191,19 @@ impl eframe::App for FocusNoiseApp {
                 ui.add_space(12.0);
             }
 
-            self.language_controls(ui, lang);
-            ui.separator();
-
-            ui.label(format!(
-                "{}: {}",
-                text(lang, "State", "状態"),
-                state_label(lang, self.playback())
-            ));
+            ui.label(format!("State: {}", state_label(self.playback())));
 
             ui.add_space(8.0);
-            self.noise_controls(ui, lang);
+            self.noise_controls(ui);
 
             ui.add_space(12.0);
-            self.level_controls(ui, lang);
+            self.level_controls(ui);
 
             ui.add_space(16.0);
-            self.playback_controls(ui, lang);
+            self.playback_controls(ui);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                ui.label(text(
-                    lang,
-                    "Offline. Noise is generated locally.",
-                    "オフライン動作。ノイズはローカル生成です。",
-                ));
+                ui.label("Offline. Noise is generated locally.");
             });
         });
 

@@ -4,26 +4,40 @@ use anyhow::Result;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Language, NoiseKind};
+use crate::model::NoiseKind;
+
+const MAX_OUTPUT_GAIN: f32 = 0.1;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub noise_kind: NoiseKind,
-    pub volume: f32,
-    pub balance: f32,
-    pub fade_seconds: f32,
-    pub language: Language,
+    pub volume: u8,
+    pub balance: u8,
+    pub fade_seconds: u8,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             noise_kind: NoiseKind::White,
-            volume: 0.35,
-            balance: 0.0,
-            fade_seconds: 2.0,
-            language: Language::Japanese,
+            volume: 50,
+            balance: 50,
+            fade_seconds: 2,
         }
+    }
+}
+
+impl Settings {
+    pub fn output_gain(&self) -> f32 {
+        (self.volume as f32 / 100.0) * MAX_OUTPUT_GAIN
+    }
+
+    pub fn balance_pan(&self) -> f32 {
+        ((self.balance as f32 / 100.0) * 2.0) - 1.0
+    }
+
+    pub fn fade_seconds_f32(&self) -> f32 {
+        self.fade_seconds as f32
     }
 }
 
